@@ -39,7 +39,7 @@ module.exports = (env, options) => ({
         }),
         new WWPlugin(),
         new webpack.DefinePlugin({
-            MOB_DEBUG: JSON.stringify(process.env.MOB_DEBUG)
+            MOB_DEBUG: JSON.stringify(true)
         })
     ],
     devServer: {

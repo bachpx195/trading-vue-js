@@ -30,6 +30,7 @@ export default {
     },
     methods: {
         selected(tool) {
+            console.log(tool.type)
             this.$emit('custom-event', {
                 event:'tool-selected', args: [tool.type]
             })

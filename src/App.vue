@@ -1,26 +1,80 @@
 <template>
-<trading-vue :data="chart" :width="this.width" :height="this.height"
+<div v-if="!loading">
+    <trading-vue
+        :data="chart"
+        :width="width"
+        :height="height - 100"
+        :toolbar="true"
         :color-back="colors.colorBack"
         :color-grid="colors.colorGrid"
-        :color-text="colors.colorText">
-</trading-vue>
+        :color-text="colors.colorText"/>
+    <config-chart
+        :width="width"
+        :height="100"
+        :selected="configSelected"
+        :current-time="currentDateFormat"
+        @select-merchandise="onSelectMerchandise"
+        @select-interval="onSelectInterval"
+        @select-date="onSelectDate"
+        @async-candlestick-data="asyncCandlestickData"
+        @next-chart="nextChart"
+        @back-chart="backChart" />
+</div>
+<div v-else>
+    <loading-screen ></loading-screen>
+</div>
 </template>
 
 <script>
 import TradingVue from './TradingVue.vue'
-import Data from '../data/data.json'
+import ConfigChart from './components/ConfigChart.vue'
 import DataCube from '../src/helpers/datacube.js'
+import bus from './stuff/bus.js'
+import _ from "lodash"
+// import Const from "./stuff/constants.js"
+import moment from 'moment'
+import LoadingScreen from './components/LoadingScreen.vue'
 
 export default {
     name: 'app',
     components: {
-        TradingVue
+        TradingVue, ConfigChart, LoadingScreen
     },
-    methods: {
-        onResize() {
-            this.width = window.innerWidth
-            this.height = window.innerHeight
+    data() {
+        return {
+            chart: null,
+            loading: true,
+            chartFuture: [],
+            width: window.innerWidth,
+            height: window.innerHeight,
+            colors: {
+                // colorBack: '#fff',
+                // colorGrid: '#eee',
+                // colorText: '#333',
+            },
+            configSelected: {
+                // TODO: chọn cặp hiển thị default
+                merchandiseId: this.$store.state.merchandises[1].id,
+                intervalType: this.$store.state.intervals.hour
+            },
+            merchandiseRateSelected: {
+                // Cặp alt/usdt
+                mainId: null
+            },
+            currentTime: null
+        };
+    },
+    computed: {
+        findMerchandiseRateMain() {
+            const merchandise = _.find(this.$store.state.merchandiseRates, { base_id: this.configSelected.merchandiseId, quote_id: 13 });
+            return merchandise
+        },
+        currentDateFormat() {
+            return moment(this.currentTime).add(1, "hours").format("YYYY-MM-DD HH:MM").toString()
         }
+    },
+    created() {
+        this.fetchChartData(null)
     },
     mounted() {
         window.addEventListener('resize', this.onResize)
@@ -29,17 +83,108 @@ export default {
     beforeDestroy() {
         window.removeEventListener('resize', this.onResize)
     },
-    data() {
-        return {
-            chart: new DataCube(Data),
-            width: window.innerWidth,
-            height: window.innerHeight,
-            colors: {
-                colorBack: '#fff',
-                colorGrid: '#eee',
-                colorText: '#333',
+    methods: {
+        updateChartData(ohlcvData) {
+            
+            this.chart.chunk_loaded(ohlcvData)
+        },
+        onResize() {
+            this.width = window.innerWidth
+            this.height = window.innerHeight
+        },
+        fetchChartData(date) {
+            this.fetchChartDataByMerchandiseRate(1, this.merchandiseRateSelected.mainId, date)
+        },
+        fetchChartDataByMerchandiseRate(chartNumber, merchandiseId, date) {
+            const params = {
+                merchandise_rate_id: 35,
+                time_type: this.configSelected.intervalType,
+                date: date
             }
-        };
+
+            this.$store.dispatch('getCandleStickData', params).then(res => {
+                const data = {
+                    "ohlcv": res.data.ohlcv,
+                    "tools": [
+                        {
+                            "type": "Cursor",
+                            "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAAZAgMAAAC5h23wAAAAAXNSR0IB2cksfwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAxQTFRFAAAATU1NTU1NTU1NwlMHHwAAAAR0Uk5TAOvhxbpPrUkAAAAkSURBVHicY2BgYHBggAByabxg1WoGBq2pRCk9AKUbcND43AEAufYHlSuusE4AAAAASUVORK5CYII="
+                        },
+                        {
+                            "type": "LineToolSegment",
+                            "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAAZAgMAAAC5h23wAAAAAXNSR0IB2cksfwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAlQTFRFAAAATU1NJCQkCxcHIQAAAAN0Uk5TAP8SmutI5AAAACxJREFUeJxjYMACGAMgNAsLdpoVKi8AVe8A1QblQlWRKt0AoULw2w1zGxoAABdiAviQhF/mAAAAAElFTkSuQmCC"
+                        },
+                        {
+                            "type": "LineToolExtended",
+                            "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAAZAQMAAAD+JxcgAAAAAXNSR0IB2cksfwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAZQTFRFAAAATU1NkJ+rOQAAAAJ0Uk5TAP9bkSK1AAAANElEQVR4nGNggABGEMEEIlhABAeI+AASF0AlHmAqA4kzKAAx8wGQuAMKwd6AoYzBAWonAwAcLwTgNfJ3RQAAAABJRU5ErkJggg=="
+                        }
+                    ],
+                    "tool": "Cursor"
+                }
+                this.chart = new DataCube(data)
+                this.chartFuture = res.data.future_ohlcv
+                this.loading = false
+                this.setCurrentTime()
+            })
+        },
+        onSelectMerchandise(merchandiseSelected) {
+            bus.$emit('select-merchandise', merchandiseSelected)
+            this.configSelected.merchandiseId = merchandiseSelected
+            this.updateMerchandiseRateSelected()
+            this.fetchChartData()
+        },
+        onSelectInterval(intervalSelected) {
+            bus.$emit('select-interval', intervalSelected)
+            this.configSelected.intervalType = intervalSelected
+            this.updateMerchandiseRateSelected()
+            this.fetchChartData()
+        },
+        onSelectDate(date) {
+            bus.$emit('select-date', date)
+            const dateParam = moment(date).format()
+            this.fetchChartData(dateParam)
+        },
+        updateMerchandiseRateSelected() {
+            this.merchandiseRateSelected.mainId = this.findMerchandiseRateMain.id
+        },
+        asyncCandlestickData() {
+            this.isLoading = true
+            const params = {
+                merchandise_rate_ids: [this.merchandiseRateSelected.mainId],
+                time_type: this.configSelected.intervalType
+            }
+            this.$store.dispatch('asyncCandlestickData', params).then(res => {
+                this.fetchChartData()
+                this.isLoading = false
+                alert(res.data.lastest_time)
+            })
+        },
+        nextChart() {
+            this.setNextChartDate()
+        },
+        backChart() {
+            this.setBackChartDate()
+        },
+        setNextChartDate() {
+            if(this.chartFuture.length == 0) return
+            this.chart.data.chart.data.push(this.chartFuture.shift())
+            this.updateChartData(this.chart.data.chart.data)
+            this.setCurrentTime()
+        },
+        setBackChartDate() {
+            this.chartFuture.unshift(this.chart.data.chart.data.pop())
+            this.updateChartData(this.chart.data.chart.data)
+            this.setCurrentTime()
+        },
+        setCurrentTime() {
+            let lastDate = null
+            if(this.chart.data.ohlcv) {
+                lastDate = new Date(this.chart.data.ohlcv[this.chart.data.ohlcv.length - 2][0])
+            } else {
+                lastDate = new Date(this.chart.data.chart.data[this.chart.data.chart.data.length - 2][0])
+            }
+            this.currentTime = lastDate.toString()
+        }
     }
 };
 </script>

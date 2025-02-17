@@ -125,6 +125,7 @@ export default class DataCube extends DCCore {
     // Update/append data point, depending on timestamp
     update(data) {
         if(data['candle']) {
+            console.log('candle', data['candle'])
             return this.update_candle(data)
         } else {
             return this.update_tick(data)

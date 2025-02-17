@@ -1,4 +1,3 @@
-
 <template>
     <!-- Main component  -->
     <div class="trading-vue" v-bind:id="id"
@@ -247,6 +246,7 @@ export default {
         }
     },
     data() {
+        console.log("data", this.data)
         return { reset: 0, tip: null }
     },
     beforeDestroy() {
@@ -312,6 +312,7 @@ export default {
             })
         },
         custom_event(d) {
+            console.log("hihi", d)
             if ('args' in d) {
                 this.$emit(d.event, ...d.args)
             } else {
