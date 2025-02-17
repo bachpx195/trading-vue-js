@@ -70,7 +70,7 @@ export default {
             return merchandise
         },
         currentDateFormat() {
-            return moment(this.currentTime).add(1, "hours").format("YYYY-MM-DD HH:MM").toString()
+            return moment(this.currentTime).add(1, "hours").format("YYYY-MM-DD HH:MM dddd").toString()
         }
     },
     created() {
@@ -85,7 +85,6 @@ export default {
     },
     methods: {
         updateChartData(ohlcvData) {
-            
             this.chart.chunk_loaded(ohlcvData)
         },
         onResize() {
@@ -93,9 +92,9 @@ export default {
             this.height = window.innerHeight
         },
         fetchChartData(date) {
-            this.fetchChartDataByMerchandiseRate(1, this.merchandiseRateSelected.mainId, date)
+            this.fetchChartDataByMerchandiseRate(date)
         },
-        fetchChartDataByMerchandiseRate(chartNumber, merchandiseId, date) {
+        fetchChartDataByMerchandiseRate(date) {
             const params = {
                 merchandise_rate_id: 35,
                 time_type: this.configSelected.intervalType,
@@ -142,7 +141,20 @@ export default {
         onSelectDate(date) {
             bus.$emit('select-date', date)
             const dateParam = moment(date).format()
-            this.fetchChartData(dateParam)
+
+            const params = {
+                merchandise_rate_id: 35,
+                time_type: this.configSelected.intervalType,
+                date: dateParam
+            }
+
+            this.$store.dispatch('getCandleStickData', params).then(res => {
+                this.chart.set('chart.data', res.data.ohlcv)
+                this.chartFuture = res.data.future_ohlcv
+                this.setCurrentTime()
+            })
+
+            // this.fetchChartDataByMerchandiseRate(dateParam)
         },
         updateMerchandiseRateSelected() {
             this.merchandiseRateSelected.mainId = this.findMerchandiseRateMain.id
