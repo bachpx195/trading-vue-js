@@ -1,24 +1,31 @@
 <template>
 <div v-if="!loading">
-    <trading-vue
-        :data="chart"
-        :width="width"
-        :height="height - 100"
-        :toolbar="true"
-        :color-back="colors.colorBack"
-        :color-grid="colors.colorGrid"
-        :color-text="colors.colorText"/>
     <config-chart
         :width="width"
-        :height="100"
+        :height="50"
         :selected="configSelected"
-        :current-time="currentDateFormat"
+        :current-time="currentTime"
         @select-merchandise="onSelectMerchandise"
         @select-interval="onSelectInterval"
         @select-date="onSelectDate"
         @async-candlestick-data="asyncCandlestickData"
         @next-chart="nextChart"
         @back-chart="backChart" />
+    <div class="main-container">
+        <trading-vue
+        :data="chart"
+        :width="width - 200"
+        :height="height - 50"
+        :toolbar="true"
+        :timezone="7"
+        :color-back="colors.colorBack"
+        :color-grid="colors.colorGrid"
+        :color-text="colors.colorText"/>
+        <watch-list
+            :info="lastCandlestickInfo"
+            :width="200"
+            :height="height - 50" />
+    </div>
 </div>
 <div v-else>
     <loading-screen ></loading-screen>
@@ -28,6 +35,7 @@
 <script>
 import TradingVue from './TradingVue.vue'
 import ConfigChart from './components/ConfigChart.vue'
+import WatchList from './components/WatchList.vue'
 import DataCube from '../src/helpers/datacube.js'
 import bus from './stuff/bus.js'
 import _ from "lodash"
@@ -38,13 +46,15 @@ import LoadingScreen from './components/LoadingScreen.vue'
 export default {
     name: 'app',
     components: {
-        TradingVue, ConfigChart, LoadingScreen
+        TradingVue, ConfigChart, LoadingScreen, WatchList
     },
     data() {
         return {
             chart: null,
             loading: true,
             chartFuture: [],
+            datetimeIdMapping: null,
+            lastCandlestickInfo: null,
             width: window.innerWidth,
             height: window.innerHeight,
             colors: {
@@ -70,7 +80,7 @@ export default {
             return merchandise
         },
         currentDateFormat() {
-            return moment(this.currentTime).add(1, "hours").format("YYYY-MM-DD HH:MM dddd").toString()
+            return moment(this.currentTime).format("YYYY-MM-DD HH:MM dddd").toString()
         }
     },
     created() {
@@ -122,8 +132,10 @@ export default {
                 }
                 this.chart = new DataCube(data)
                 this.chartFuture = res.data.future_ohlcv
+                this.datetimeIdMapping = res.data.datetime_id_mapping
                 this.loading = false
-                this.setCurrentTime()
+                let dateTimestamp = this.setCurrentTime()
+                this.getLastCandlestickInfo(dateTimestamp)
             })
         },
         onSelectMerchandise(merchandiseSelected) {
@@ -151,7 +163,9 @@ export default {
             this.$store.dispatch('getCandleStickData', params).then(res => {
                 this.chart.set('chart.data', res.data.ohlcv)
                 this.chartFuture = res.data.future_ohlcv
-                this.setCurrentTime()
+                this.datetimeIdMapping = res.data.datetime_id_mapping
+                let dateTimestamp = this.setCurrentTime()
+                this.getLastCandlestickInfo(dateTimestamp)
             })
 
             // this.fetchChartDataByMerchandiseRate(dateParam)
@@ -181,21 +195,33 @@ export default {
             if(this.chartFuture.length == 0) return
             this.chart.data.chart.data.push(this.chartFuture.shift())
             this.updateChartData(this.chart.data.chart.data)
-            this.setCurrentTime()
+            let dateTimestamp = this.setCurrentTime()
+            this.getLastCandlestickInfo(dateTimestamp)
         },
         setBackChartDate() {
             this.chartFuture.unshift(this.chart.data.chart.data.pop())
             this.updateChartData(this.chart.data.chart.data)
-            this.setCurrentTime()
+            let dateTimestamp = this.setCurrentTime()
+            this.getLastCandlestickInfo(dateTimestamp)
         },
         setCurrentTime() {
             let lastDate = null
             if(this.chart.data.ohlcv) {
-                lastDate = new Date(this.chart.data.ohlcv[this.chart.data.ohlcv.length - 2][0])
+                lastDate = this.chart.data.ohlcv[this.chart.data.ohlcv.length - 1][0]
             } else {
-                lastDate = new Date(this.chart.data.chart.data[this.chart.data.chart.data.length - 2][0])
+                lastDate = this.chart.data.chart.data[this.chart.data.chart.data.length - 1][0]
             }
-            this.currentTime = lastDate.toString()
+            let currentDate = new Date(lastDate)
+            this.currentTime = currentDate.toString()
+            return lastDate
+        },
+        getLastCandlestickInfo(time) {
+            const params = {
+                id: this.datetimeIdMapping[`${time}`]
+            }
+            this.$store.dispatch('getCandleStickInfoData', params).then(res => {
+                this.lastCandlestickInfo = res.data
+            })
         }
     }
 };
@@ -208,5 +234,8 @@ body {
     margin: 0;
     padding: 0;
     overflow: hidden;
+}
+.main-container {
+    display: flex;
 }
 </style>

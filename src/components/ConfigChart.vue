@@ -2,32 +2,52 @@
 <template>
     <!-- Main component  -->
     <div id="config-chart" :style="style">
-        <div class="config-select" style="width: 30%">
-            {{ this.$props.currentTime }}
-        </div>
         <div class="config-select" style="width: 10%">
             <select v-model="configSelected.merchandiseId" name="select-coin" class="form-control" @change="changeMerchandise">
-                <option v-for="mr in this.merchandiseList" :value="mr.id" :key="mr.id">
+                <option v-for="mr in merchandiseList" :value="mr.id" :key="mr.id">
                     {{ mr.slug }}
                 </option>
             </select>
         </div>
         <div class="config-select" style="width: 10%">
             <select v-model="configSelected.intervalType" name="select-coin" class="form-control" @change="changeInterval">
-                <option v-for="(value, key) in this.intervalList" :value="value" :key="value">
+                <option v-for="(value, key) in intervalList" :value="value" :key="value">
                     {{ key }}
                 </option>
             </select>
         </div>
+        <div class="config-select" style="width: 30%">
+            {{ currentDateFormat }}
+        </div>
         <div class="config-select" style="width: 20%">
-            <dropdown-datepicker :on-change="changeDate"></dropdown-datepicker>
+            <datepicker
+                placeholder="Select Date"
+                :value="currentTime"
+                @selected="changeDate"/>
+            <!-- <dropdown-datepicker :on-change="changeDate"></dropdown-datepicker> -->
+            <select
+                v-model="hour"
+                name="select-hour"
+                class="form-control"
+                @change="changeHour"
+            >
+                <option v-for="(value, key) in [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]" :value="value" :key="value">
+                    {{ key }}
+                </option>
+            </select>
         </div>
         <br>
         <div class="config-select" style="width: 20%">
-            <button class="next-btn" @click="backChart">
+            <button 
+                class="next-btn"
+                @click="backChart"
+                >
                 Back
             </button>
-            <button class="next-btn" @click="nextChart">
+            <button 
+                class="next-btn"
+                @click="nextChart"
+            >
                 Next
             </button>
         </div>
@@ -36,12 +56,13 @@
 
 <script>
 
-import DropdownDatepicker from './DropdownDatepicker.vue'
+import Datepicker from "vuejs-datepicker/dist/vuejs-datepicker.esm.js";
 import _ from "lodash"
+import moment from 'moment'
 
 export default {
     name: 'ConfigChart',
-    components: { DropdownDatepicker },
+    components: { Datepicker },
     mixins: [],
     props: {
       selected: {
@@ -67,12 +88,16 @@ export default {
             configSelected: {
                 merchandiseId: this.$props.selected.merchandiseId,
                 intervalType: this.$props.selected.intervalType,
-            }
+            },
+            hour: _.toNumber(moment(this.currentTime).format("HH"))
         }
     },
     computed: {
         style() {
             return 'width: ' + this.$props.width + 'px; height: ' + this.$props.height + 'px'
+        },
+        currentDateFormat() {
+            return moment(this.currentTime).format("YYYY-MM-DD HH:MM dddd").toString()
         }
     },
     mounted() {
@@ -95,11 +120,8 @@ export default {
         changeInterval() {
             this.$emit('select-interval', this.configSelected.intervalType)
         },
-        changeDate(minute, hour, day, month, year) {
-            if (_.toInteger(day) > 0 && _.toInteger(month) > 0 && _.toInteger(year) > 0 && !_.isNull(hour) && !_.isNull(minute)) {
-                const date = new Date(_.toInteger(year), _.toInteger(month) - 1, _.toInteger(day), hour, minute)
-                this.$emit('select-date', date)
-            }
+        changeDate(e) {
+            this.$emit('select-date', e)
         },
         asyncUpdateData() {
             this.$emit('async-candlestick-data')
@@ -109,6 +131,11 @@ export default {
         },
         backChart() {
             this.$emit('back-chart')
+        },
+        changeHour() {
+            let dateTime = moment(this.currentTime)
+            dateTime.set({h: this.hour})
+            this.$emit('select-date', dateTime)
         }
     }
 }
@@ -121,11 +148,13 @@ export default {
     right: 0;
     font-size: 20px;
     color: red;
+    height: auto;
 }
 .config-title {
     text-align: center;
 }
 .config-select {
+    display: flex;
     margin: 0 auto;
     text-align: center;
 }
