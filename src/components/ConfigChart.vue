@@ -16,7 +16,7 @@
                 </option>
             </select>
         </div>
-        <div class="config-select" style="width: 30%">
+        <div class="config-select" style="width: 10%">
             {{ currentDateFormat }}
         </div>
         <div class="config-select" style="width: 20%">
@@ -24,20 +24,28 @@
                 placeholder="Select Date"
                 :value="currentTime"
                 @selected="changeDate"/>
-            <!-- <dropdown-datepicker :on-change="changeDate"></dropdown-datepicker> -->
+            <!-- <select
+                name="select-hour"
+                class="form-control"
+                @change="changeDate"
+            >
+                <option v-for="(value, key) in listDate" :value="value" :key="key">
+                    {{ value }}
+                </option>
+            </select>     -->
             <select
                 v-model="hour"
                 name="select-hour"
                 class="form-control"
                 @change="changeHour"
             >
-                <option v-for="(value, key) in [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]" :value="value" :key="value">
-                    {{ key }}
+                <option v-for="(value, key) in [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]" :value="value" :key="key">
+                    {{ value }}
                 </option>
             </select>
         </div>
         <br>
-        <div class="config-select" style="width: 20%">
+        <div class="config-select" style="width: 10%">
             <button 
                 class="next-btn"
                 @click="backChart"
@@ -59,6 +67,7 @@
 import Datepicker from "vuejs-datepicker/dist/vuejs-datepicker.esm.js";
 import _ from "lodash"
 import moment from 'moment'
+import dateConst from "../stuff/list_date_constants.js"
 
 export default {
     name: 'ConfigChart',
@@ -98,6 +107,9 @@ export default {
         },
         currentDateFormat() {
             return moment(this.currentTime).format("YYYY-MM-DD HH:MM dddd").toString()
+        },
+        listDate() {
+            return dateConst.PULLBACK_DATES
         }
     },
     mounted() {

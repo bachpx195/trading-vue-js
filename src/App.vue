@@ -95,7 +95,9 @@ export default {
     },
     methods: {
         updateChartData(ohlcvData) {
-            this.chart.chunk_loaded(ohlcvData)
+            this.chart.set('chart.data', ohlcvData)
+            const customData = this.getDrawPoint(ohlcvData)
+            this.chart.set('onchart.Custom0.data', customData)
         },
         onResize() {
             this.width = window.innerWidth
@@ -112,8 +114,16 @@ export default {
             }
 
             this.$store.dispatch('getCandleStickData', params).then(res => {
+                const ohlcv = res.data.ohlcv
+                const customData = this.getDrawPoint(ohlcv)
                 const data = {
-                    "ohlcv": res.data.ohlcv,
+                    "ohlcv": ohlcv,
+                    "onchart": [{
+                        name: 'Custom',
+                        type: 'Custom',
+                        data: customData,
+                        settings: {}
+                    }],
                     "tools": [
                         {
                             "type": "Cursor",
@@ -161,7 +171,7 @@ export default {
             }
 
             this.$store.dispatch('getCandleStickData', params).then(res => {
-                this.chart.set('chart.data', res.data.ohlcv)
+                this.updateChartData(res.data.ohlcv)
                 this.chartFuture = res.data.future_ohlcv
                 this.datetimeIdMapping = res.data.datetime_id_mapping
                 let dateTimestamp = this.setCurrentTime()
@@ -207,12 +217,16 @@ export default {
         setCurrentTime() {
             let lastDate = null
             if(this.chart.data.ohlcv) {
-                lastDate = this.chart.data.ohlcv[this.chart.data.ohlcv.length - 1][0]
+                lastDate = this.getLastTimestamp(this.chart.data.ohlcv)
             } else {
-                lastDate = this.chart.data.chart.data[this.chart.data.chart.data.length - 1][0]
+                lastDate = this.getLastTimestamp(this.chart.data.chart.data)
             }
             let currentDate = new Date(lastDate)
             this.currentTime = currentDate.toString()
+            return lastDate
+        },
+        getLastTimestamp(data){
+            let lastDate = data[data.length - 1][0]
             return lastDate
         },
         getLastCandlestickInfo(time) {
@@ -222,6 +236,16 @@ export default {
             this.$store.dispatch('getCandleStickInfoData', params).then(res => {
                 this.lastCandlestickInfo = res.data
             })
+        },
+        getDrawPoint(data){
+            const lastTimestamp = this.getLastTimestamp(data)
+            const currentDate = new Date(lastTimestamp)
+            const firstTimestamp = currentDate.setUTCHours(0,0,0,0)
+
+            const dayData = _.filter(data, function (n) {
+                return  n[0] >= firstTimestamp & n[0] <= lastTimestamp
+            });
+            return [[firstTimestamp, _.max(_.map(dayData, function(x) {return x[2]}))], [lastTimestamp, _.min(_.map(dayData, function(x) {return x[3]}))]]
         }
     }
 };

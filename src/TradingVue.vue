@@ -1,34 +1,46 @@
 <template>
     <!-- Main component  -->
-    <div class="trading-vue" v-bind:id="id"
-        @mousedown="mousedown" @mouseleave="mouseleave"
-         :style="{
+    <div
+        :id="id"
+        class="trading-vue"
+        :style="{
+            // eslint-disable-next-line vue/this-in-template
             color: this.chart_props.colors.text,
+            // eslint-disable-next-line vue/this-in-template
             font: this.font_comp,
+            // eslint-disable-next-line vue/this-in-template
             width: this.width+'px',
-            height: this.height+'px'}">
-        <toolbar v-if="toolbar"
+            // eslint-disable-next-line vue/this-in-template
+            height: this.height+'px'}"
+        @mousedown="mousedown"
+        @mouseleave="mouseleave">
+        <toolbar
+            v-if="toolbar"
             ref="toolbar"
-            v-on:custom-event="custom_event"
             v-bind="chart_props"
-            v-bind:config="chart_config">
-        </toolbar>
-        <widgets v-if="controllers.length"
+            :config="chart_config"
+            @custom-event="custom_event"/>
+        <widgets
+            v-if="controllers.length"
             ref="widgets"
-            :map="ws" :width="width" :height="height"
-            :tv="this" :dc="data">
-        </widgets>
-        <chart :key="reset"
+            :map="ws"
+            :width="width"
+            :height="height"
+            :tv="this"
+            :dc="data"/>
+        <chart
+            :key="reset"
             ref="chart"
             v-bind="chart_props"
-            v-bind:tv_id="id"
-            v-bind:config="chart_config"
-            v-on:custom-event="custom_event"
-            v-on:range-changed="range_changed"
-            v-on:legend-button-click="legend_button">
-        </chart>
+            :tv_id="id"
+            :config="chart_config"
+            @custom-event="custom_event"
+            @range-changed="range_changed"
+            @legend-button-click="legend_button"/>
         <transition name="tvjs-drift">
-            <the-tip :data="tip" v-if="tip"
+            <the-tip
+                v-if="tip"
+                :data="tip"
                 @remove-me="tip = null"/>
         </transition>
     </div>
@@ -126,6 +138,7 @@ export default {
             type: String,
             default: '#565c68'
         },
+        // eslint-disable-next-line vue/require-default-prop
         colorTbBack: {
             type: String
         },
@@ -133,6 +146,7 @@ export default {
             type: String,
             default: '#8282827d'
         },
+        // eslint-disable-next-line vue/require-default-prop
         colors: {
             type: Object
         },
@@ -175,6 +189,7 @@ export default {
             type: Object,
             default: function () { return {} }
         },
+        // eslint-disable-next-line vue/require-default-prop
         skin: {
             type: String // Skin Name
         },
@@ -182,6 +197,9 @@ export default {
             type: Number,
             default: 0
         }
+    },
+    data() {
+        return { reset: 0, tip: null }
     },
     computed: {
         // Copy a subset of TradingVue props
@@ -205,6 +223,7 @@ export default {
             }
 
             this.parse_colors(chart_props.colors)
+            console.log("chart_props", chart_props)
             return chart_props
         },
         chart_config() {
@@ -244,10 +263,6 @@ export default {
             return this.skin_proto && this.skin_proto.font ?
                 this.skin_proto.font : this.font
         }
-    },
-    data() {
-        console.log("data", this.data)
-        return { reset: 0, tip: null }
     },
     beforeDestroy() {
         this.custom_event({ event: 'before-destroy' })

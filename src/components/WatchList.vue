@@ -1,7 +1,7 @@
 
 <template>
     <!-- Main component  -->
-    <div id="watch-list" :style="style">
+    <div id="watch-list" v-if="info" :style="style">
       <table class="table table-dark">
         <thead>
           <tr>
@@ -32,8 +32,12 @@
           </tr>
           <tr>
             <th scope="row">LTC.B</th>
-            <td>Larry</td>
-            <td>the Bird</td>
+            <td :class="`${info.altbtc_return_day > 0 ? 'green' : 'red'}`">
+              {{ info.altbtc_return_day }}
+            </td>
+            <td :class="`${info.altbtc_return_24h > 0 ? 'green' : 'red'}`">
+              {{ info.altbtc_return_24h }}
+            </td>
           </tr>
         </tbody>
       </table>
