@@ -74,6 +74,7 @@ export default {
     components: { Datepicker },
     mixins: [],
     props: {
+      // eslint-disable-next-line vue/require-default-prop
       selected: {
           type: Object
       },
@@ -85,6 +86,7 @@ export default {
           type: Number,
           default: 421
       },
+      // eslint-disable-next-line vue/require-default-prop
       currentTime: {
           type: String
       }

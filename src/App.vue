@@ -23,6 +23,7 @@
         :color-text="colors.colorText"/>
         <watch-list
             :info="lastCandlestickInfo"
+            :current-time="currentTime"
             :width="200"
             :height="height - 50" />
     </div>
@@ -241,11 +242,38 @@ export default {
             const lastTimestamp = this.getLastTimestamp(data)
             const currentDate = new Date(lastTimestamp)
             const firstTimestamp = currentDate.setUTCHours(0,0,0,0)
+            const firstYesterdayTimestamp = firstTimestamp - (24*60*60*1000)
+
 
             const dayData = _.filter(data, function (n) {
                 return  n[0] >= firstTimestamp & n[0] <= lastTimestamp
             });
-            return [[firstTimestamp, _.max(_.map(dayData, function(x) {return x[2]}))], [lastTimestamp, _.min(_.map(dayData, function(x) {return x[3]}))]]
+
+            const openCandlestick = _.find(data, function (n) {
+                return  n[0] == firstTimestamp
+            });
+
+            const yesterdayData = _.filter(data, function (n) {
+                return  n[0] >= firstYesterdayTimestamp & n[0] < firstTimestamp
+            });
+
+            const yesterdayHigh = _.max(_.map(yesterdayData, function(x) {return x[2]}))
+            const yesterdayLow = _.min(_.map(yesterdayData, function(x) {return x[3]}))
+
+            return [
+                // day zone
+                [firstTimestamp, _.max(_.map(dayData, function(x) {return x[2]}))],
+                [lastTimestamp, _.min(_.map(dayData, function(x) {return x[3]}))],
+                // open line
+                [firstYesterdayTimestamp, openCandlestick[1]],
+                [lastTimestamp, openCandlestick[1]],
+                // high line
+                [firstYesterdayTimestamp, yesterdayHigh],
+                [lastTimestamp, yesterdayHigh],
+                // low line
+                [firstYesterdayTimestamp, yesterdayLow],
+                [lastTimestamp, yesterdayLow]
+            ]
         }
     }
 };
